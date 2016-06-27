@@ -1,0 +1,59 @@
+/**
+ * @overview
+ * @author Florian Wurth 2016
+ */
+
+
+.noSpacing
+{
+    padding:0px;
+    margin:0px;
+}
+
+.noSpacing td
+{
+    padding:0px;
+    margin:0px;
+}
+.noSpacing td input
+{
+    padding:-2px;
+    margin:-2px;
+
+}
+
+#sheet
+{
+    overflow: scroll;
+    width:800px;
+}
+
+.input--textfield-off {
+    background-color: white;
+    color: transparent;
+    text-shadow: 0 0 0 black;
+}
+.input--textfield-on {
+
+    background-color: white;
+    text-shadow: none;
+    outline: none;  border-color: #009900;
+    box-shadow: 0 0 10px #9ecaed;
+
+}
+
+
+.input--textfield-selected {
+    color: black;
+    text-shadow: none;
+    background-color: white;
+
+}
+
+.input--textfield-selection {
+    color: black;
+    text-shadow: none;
+    background-color :  greenyellow;
+    background:greenyellow;
+
+}
