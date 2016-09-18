@@ -16,7 +16,7 @@ var SS_Cell = function( _column, _row, _sheet )
     this.mValue ="";
     this.mEquationValue = "";
     this.mMyLastCaretPosition = 0;
-    this.mActiveClass = "input--textfield-off";
+    this.mActiveClass = "input--textfield-off td";
     this.Editable = false;
     this.mFocus = false;
     this.mObserverCells = [];
@@ -81,6 +81,11 @@ SS_Cell.prototype.getObjRef = function ()
     if(this.mObjRef == null)
     {
         this.mObjRef = document.getElementById(this.mId);
+        if(this.mObjRef == null)
+        {
+            Console.log("error");
+
+        }
         this.SetInActive();
         this.registerEvents();
     }
@@ -94,7 +99,7 @@ SS_Cell.prototype.onCellChange = function (  )
 {
     this.mMyLastCaretPosition=doGetCaretPosition(this.getObjRef());
 
-    this.setEquation(this.getObjRef().value);
+    this.setEquation(this.getObjRef().innerHTML);
     this.SetInActive();
 
 
@@ -131,8 +136,8 @@ SS_Cell.prototype.updateGUI = function()
     {
         return;
     }
-    this.getObjRef().value = this.mValue;
-
+    //this.getObjRef().value = this.mValue;
+    this.getObjRef().innerHTML = this.mValue;
     return this.mId;
 };
 
@@ -161,6 +166,7 @@ SS_Cell.prototype.gainFocus = function()
 
     this.getObjRef().focus();
     this.setValue(this.mEquationValue);
+    this.SetSelectedPre();
 
 };
 
@@ -177,19 +183,24 @@ SS_Cell.prototype.loseFocus  = function()
 
 SS_Cell.prototype.SetSelected  = function()
 {
-    this.SetActiveClass("input--textfield-selected");
+    this.SetActiveClass("input--textfield-selected td");
+};
+
+SS_Cell.prototype.SetSelectedPre  = function()
+{
+    this.SetActiveClass("input--textfield-selected-pre td");
 };
 
 SS_Cell.prototype.SetInActive  = function()
 {
-    this.SetActiveClass("input--textfield-off");
+    this.SetActiveClass("input--textfield-off td");
     this.Editable = false;
     this.setValue(this.mValue);
 };
 
 SS_Cell.prototype.SetActive  = function()
 {
-    this.SetActiveClass("input--textfield-on");
+    this.SetActiveClass("input--textfield-on td");
     //this.getObjRef().focus();
     this.Editable = true;
 
@@ -223,19 +234,35 @@ SS_Cell.prototype.insertFunctionCall = function ( _functionName ) {
     var output = [inputValue.slice(0, this.mMyLastCaretPosition), _functionName + "()", inputValue.slice(this.mMyLastCaretPosition)].join('');
     this.setValue(output);
     this.mMyLastCaretPosition = this.mMyLastCaretPosition + _functionName.length + 1;
-    this.getObjRef().setSelectionRange( this.mMyLastCaretPosition,  this.mMyLastCaretPosition);
+    //this.getObjRef().setSelectionRange( this.mMyLastCaretPosition,  this.mMyLastCaretPosition);
+
+    var range = document.createRange();
+    var sel = window.getSelection();
+    range.setStart(this.getObjRef().childNodes[0], this.mMyLastCaretPosition);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
     this.SetActive();
 };
 
 SS_Cell.prototype.insertSelectionRange = function ( _selectionrange )
 {
-    var inputValue = this.getObjRef().value;
+    var inputValue = this.getObjRef().innerHTML;
 
     var output = [inputValue.slice(0, this.mMyLastCaretPosition), _selectionrange, inputValue.slice(this.mMyLastCaretPosition)].join('');
 
-    this.getObjRef().value = output;
+    this.getObjRef().innerHTML = output;
    // this.SetActive();
-    this.getObjRef().setSelectionRange(this.mMyLastCaretPosition,this.mMyLastCaretPosition);
+   // this.getObjRef().setSelectionRange(this.mMyLastCaretPosition,this.mMyLastCaretPosition);
+
+
+    var range = document.createRange();
+    var sel = window.getSelection();
+    range.setStart(this.getObjRef().childNodes[0], this.mMyLastCaretPosition);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+
 };
 
 //////////////Spreadsheet class ///////////////
@@ -259,7 +286,7 @@ var Spreadsheet = function( _numberOfColumns, _numberOfRows )
 };
 
 
-Spreadsheet.prototype.clickedOnCell = function(_cell)
+Spreadsheet.prototype.clickedOnCell = function(_cell,e)
 {
 
     if(this.mEditing == true && this.mLastSelectedCell == _cell)
@@ -317,7 +344,7 @@ Spreadsheet.prototype.init = function( _column, _row )
 };
 
 
-Spreadsheet.prototype.cellGainedFocus = function ( _cell )
+Spreadsheet.prototype.cellGainedFocus = function ( _cell ,e)
 {
     if(this.mSelectionActive)
     {
@@ -327,7 +354,7 @@ Spreadsheet.prototype.cellGainedFocus = function ( _cell )
     _cell.gainFocus();
 };
 
-Spreadsheet.prototype.cellLostFocus = function ( _cell )
+Spreadsheet.prototype.cellLostFocus = function ( _cell ,e)
 {
     if(this.mSelectionActive)
     {
@@ -416,7 +443,7 @@ Spreadsheet.prototype.keyPressedOnCell = function(e,_cell )
     {
         if(this.mEditing){return;}
         this.mEditing = true;
-        _cell.setValue(String.fromCharCode(keynum));
+        //_cell.setValue(String.fromCharCode(keynum));
         _cell.SetActive();
     }
 
@@ -489,38 +516,40 @@ Spreadsheet.prototype.generateHTML = function()
     }
     var htmlTable = "";
     htmlTable ="";
-    htmlTable += "<table style='border-collapse: collapse; border-spacing: 0;'>";
+    htmlTable += "<div class='table'>";
 
-    for(var rows = -1; rows < 24; rows++)
+    for(var rows = -1; rows < this.getNumberOfRows(); rows++)
     {
-        htmlTable += "<tr class='noSpacing'>";
-        for (var columns = -1; columns < 24; columns++)
+        htmlTable += "<div class='tr'>";
+        for (var columns = -1; columns < this.getNumberOfColumns(); columns++)
         {
 
 
-            htmlTable += "<td>";
+            //htmlTable += "<div class='td'>";
             if(rows == -1 && columns == -1)
             {}
             else if(rows == -1 && columns != -1)
             {
-                htmlTable += "c" + columns;
+                //htmlTable += "c" + columns;
             }
             else if(columns == -1 && rows != -1)
             {
-                htmlTable += "r" + rows;
+                //htmlTable += "r" + rows;
             }
             else
             {
-                htmlTable += "<input  type='text' id='" + this.mCells[columns][rows].getId() + "' value='"+this.mCells[columns][rows].getValue()+"'/>";
+                //htmlTable += "<input type='text' id='" + this.mCells[columns][rows].getId() + "' value='"+this.mCells[columns][rows].getValue()+"'/>";
+
+                htmlTable += "<div class='td' contentEditable='true' id='" + this.mCells[columns][rows].getId() + "'>" + this.mCells[columns][rows].getValue()+"</div>";
             }
 
-            htmlTable += "</td>";
+            //htmlTable += "</div>";
 
         }
-        htmlTable += "</tr>";
+        htmlTable += "</div>";
     }
 
-    htmlTable += "</table>";
+    htmlTable += "</div>";
     return htmlTable;
 };
 
@@ -536,22 +565,25 @@ Spreadsheet.prototype.registerEvents = function ( _cell )
 {
     var that = this;
     var cell = _cell;
-    cell.getObjRef().addEventListener("focus",function(){that.cellGainedFocus(cell);}, false);
-    cell.getObjRef().addEventListener("focusout",function(){that.cellLostFocus(cell);}, false);
+    cell.getObjRef().addEventListener("focus",function(e){that.cellGainedFocus(cell,e);}, false);
+    //cell.getObjRef().addEventListener("focusout",function(){that.cellLostFocus(cell);}, false);
+    cell.getObjRef().addEventListener("blur",function(e){that.cellLostFocus(cell,e);}, false);
 
-    cell.getObjRef().addEventListener("click",function(){that.clickedOnCell (cell);}, false);
+
+    cell.getObjRef().addEventListener("click",function(e){that.clickedOnCell (cell,e);}, false);
     cell.getObjRef().addEventListener("keydown",function(e){that.keyPressedOnCell(e,cell);}, false);
 
 
-    cell.getObjRef().addEventListener("mouseup",function(){that.mouseUpOnCell(cell);}, false);
-    cell.getObjRef().addEventListener("mousedown",function(){that.mouseDownOnCell(cell);}, false);
-    cell.getObjRef().addEventListener("mouseleave",function(){that.mouseLeaveCell(cell);}, false);
-    cell.getObjRef().addEventListener("mouseover",function(){that.mouseOverCell(cell);}, false);
+    cell.getObjRef().addEventListener("mouseup",function(e){that.mouseUpOnCell(cell,e);}, false);
+    cell.getObjRef().addEventListener("mousedown",function(e){that.mouseDownOnCell(cell,e);}, false);
+
+    cell.getObjRef().addEventListener("mouseleave",function(e){that.mouseLeaveCell(cell,e);}, false);
+    cell.getObjRef().addEventListener("mouseover",function(e){that.mouseOverCell(cell,e);}, false);
 
 };
 
 
-Spreadsheet.prototype.mouseUpOnCell = function(_cell)
+Spreadsheet.prototype.mouseUpOnCell = function(_cell,e)
 {
     if(!this.mSelectionActive){return;}
     event.preventDefault();
@@ -562,12 +594,12 @@ Spreadsheet.prototype.mouseUpOnCell = function(_cell)
     {
         for (var columns = 0; columns < 24; columns++)
         {
-            this.getCell(rows,columns).SetActiveClass("input--textfield-off");
+            this.getCell(rows,columns).SetActiveClass("input--textfield-off td");
         }
     }
 
     this.mEditing = true;
-    this.mLastSelectedCell.SetActiveClass("input--textfield-on");
+    this.mLastSelectedCell.SetActiveClass("input--textfield-on td");
 
 
     //Select everything
@@ -595,7 +627,7 @@ Spreadsheet.prototype.mouseUpOnCell = function(_cell)
         rowStartCell = tmp;
     }
 
-    var selected = "c" + columnStartCell +"r" + rowStartCell + ":" + "c" + columnStartCell + "r" + rowCurrentCell;
+    var selected = "c" + columnStartCell +"r" + rowStartCell + ":" + "c" + columnCurrentCell + "r" + rowCurrentCell;
 
     this.mLastSelectedCell.insertSelectionRange(selected);
 
@@ -604,7 +636,7 @@ Spreadsheet.prototype.mouseUpOnCell = function(_cell)
 
 };
 
-Spreadsheet.prototype.mouseDownOnCell = function(_cell)
+Spreadsheet.prototype.mouseDownOnCell = function(_cell,e)
 {
     if(!this.mSelectionActive){return;}
     event.preventDefault();
@@ -613,7 +645,7 @@ Spreadsheet.prototype.mouseDownOnCell = function(_cell)
 
 };
 
-Spreadsheet.prototype.mouseLeaveCell = function(_cell)
+Spreadsheet.prototype.mouseLeaveCell = function(_cell,e)
 {
     if(!this.mSelectionActive)
     { return;}
@@ -622,11 +654,11 @@ Spreadsheet.prototype.mouseLeaveCell = function(_cell)
 
         if(_cell == this.mLastSelectedCell)
         {
-            _cell.SetActiveClass("input--textfield-on");
+            _cell.SetActiveClass("input--textfield-on td");
         }
         else
         {
-            _cell.SetActiveClass("input--textfield-off");
+            _cell.SetActiveClass("input--textfield-off td");
         }
 
 
@@ -635,7 +667,7 @@ Spreadsheet.prototype.mouseLeaveCell = function(_cell)
 
 };
 
-Spreadsheet.prototype.mouseOverCell = function(_cell)
+Spreadsheet.prototype.mouseOverCell = function(_cell,e)
 {
     if(!this.mSelectionActive)
     { return;}
@@ -643,7 +675,7 @@ Spreadsheet.prototype.mouseOverCell = function(_cell)
     if(!this.mSelectionClickActive)
     {
 
-        _cell.SetActiveClass("input--textfield-selection");
+        _cell.SetActiveClass("input--textfield-selection td");
         return;
     }
 
@@ -680,11 +712,11 @@ Spreadsheet.prototype.mouseOverCell = function(_cell)
 
             if(rows >= rowStartCell && rows <= rowCurrentCell && columns >= columnStartCell && columns <= columnCurrentCell)
             {
-                this.getCell(columns,rows).SetActiveClass("input--textfield-selection");
+                this.getCell(columns,rows).SetActiveClass("input--textfield-selection td");
             }
             else
             {
-                this.getCell(columns,rows).SetActiveClass("input--textfield-off");
+                this.getCell(columns,rows).SetActiveClass("input--textfield-off td");
             }
 
         }
@@ -900,457 +932,28 @@ function avg ( _numbers )
 
 
 //SRC: http://stackoverflow.com/questions/2897155/get-cursor-position-in-characters-within-a-text-input-field
-function doGetCaretPosition (oField) {
-
-    // Initialize
-    var iCaretPos = 0;
-
-    // IE Support
-    if (document.selection) {
-
-        // Set focus on the element
-        oField.focus();
-
-        // To get cursor position, get empty selection range
-        var oSel = document.selection.createRange();
-
-        // Move selection start to 0 position
-        oSel.moveStart('character', -oField.value.length);
-
-        // The caret position is selection length
-        iCaretPos = oSel.text.length;
-    }
-
-    // Firefox support
-    else if (oField.selectionStart || oField.selectionStart == '0')
-        iCaretPos = oField.selectionStart;
-
-    // Return results
-    return iCaretPos;
-}
-/*
-HIDDEN_UPDATE = false;
-
-function cellChangedHiddenUpdate( _cell )
-{
-
-    //LAST_CELL = _cell;
-    // alert(_cell);
-    var eqID = "eq:"+_cell;
-    var statment = document.getElementById(eqID).value;
-    var statmentResult = evaluateStatment(statment);
-    document.getElementById(_cell).value = statmentResult;
-}
-
-function cellChanged( _cell )
-{
-
-
-    if(SELECTION_ACTIVE)
-    {
-        event.preventDefault();
-        return;
-    }
-
-
-    //LAST_CELL = _cell;
-
-    LAST_CELL_POS = doGetCaretPosition(document.getElementById(_cell));
-
-
-
-
-    var eqID = "eq:"+_cell;
-
-    var statment = "";
-
-
-    statment = document.getElementById(_cell).value;
-    document.getElementById(eqID).value = statment;
-
-
-
-    var statmentResult = evaluateStatment(statment);
-
-    document.getElementById(_cell).value = statmentResult;
-
-
-
-    EDITABLE = false;
-
-    document.getElementById(_cell).className = "input--textfield-off";
-
-
-    //Update all listeners! -> cells which reference the cell in a formular
-
-
-    var refId = "ref:"+_cell;
-
-    if(document.getElementById(refId).value != "")
-    {
-        //alert(document.getElementById(refId).value);
-        cellChangedHiddenUpdate(document.getElementById(refId).value);
-    }
-}
-
-function cellClicked( _cell )
-{
-    if(SELECTION_ACTIVE)
-    {
-        event.preventDefault();
-        return;
-    }
-
-    LAST_CELL = _cell;
-
-    var eqID = "eq:"+_cell;
-    var statment = document.getElementById(eqID).value;
-    document.getElementById(_cell).value = statment;
-}
-
-
-
-function readOnlyKeypressHandler (event) {
-    if(EDITABLE) {return;}
-    // The user has just pressed a key, but we don't want the text to change
-    // so we prevent the default action
-
-
-    event.preventDefault();
-}
-
-function keyPressedOnCell(e, _cell )
-{
-
-    // oldText = document.getElementById(_cell).value;
-    //document.getElementById(_cell).value = document.getElementById("eq:" +_cell).value;
-    //alert(oldText);
-
-    var column = Number(_cell.substring(_cell.indexOf("c")+1, _cell.indexOf(":")));
-    var row = Number(_cell.substring(_cell.indexOf("r")+1, _cell.length));
-
-    var keynum;
-
-    if(window.event) { // IE
-        keynum = e.keyCode;
-    } else if(e.which){ // Netscape/Firefox/Opera
-        keynum = e.which;
-    }
-
-    // alert(String.fromCharCode(keynum));
-
-    if(keynum == 37)
-    {
-        if(EDITABLE){return;}
-        column--;
-        var newId = "c" + column + ":r" + row;
-        document.getElementById(newId).focus();
-    }
-    else if(keynum == 38)
-    {
-        if(EDITABLE){return;}
-        row--;
-        var newId = "c" + column + ":r" + row;
-        document.getElementById(newId).focus();
-    }
-    else if(keynum == 39)
-    {
-        if(EDITABLE){return;}
-        column++;
-        var newId = "c" + column + ":r" + row;
-        document.getElementById(newId).focus();
-    }
-    else if(keynum == 40)
-    {
-        if(EDITABLE){return;}
-        row++;
-        var newId = "c" + column + ":r" + row;
-        document.getElementById(newId).focus();
-    }
-    else if(keynum == 13)
-    {
-        if(!EDITABLE)
-        {
-            EDITABLE = true;
-            document.getElementById(_cell).className = "input--textfield-on";
-        }
-        else
-        {
-
-            document.getElementById(_cell).blur();
-            row++;
-            var newId = "c" + column + ":r" + row;
-            document.getElementById(newId).focus();
-            EDITABLE = false;
-        }
-    }
-    else
-    {
-        if(EDITABLE){return;}
-        EDITABLE = true;
-        document.getElementById(_cell).className = "input--textfield-on";
-        document.getElementById(_cell).value = "";
-        //document.getElementById(_cell).value = String.fromCharCode(keynum);
-    }
-
-
-
-
-}
-var counter =0;
-var element = "none";
-var time;
-
-function upOnCell(_cell)
-{
-    if(!SELECTION_ACTIVE){return;}
-    event.preventDefault();
-
-
-    //Select cells and paste selected area
-
-    SELECTION_CLICK_ACTIVE = false;
-    SELECTION_ACTIVE = false;
-
-
-
-    for(var rows = 0; rows < 24; rows++)
-    {
-        for (var columns = 0; columns < 24; columns++)
-        {
-            var cellID = "c"+ columns +":r"+ rows;
-            document.getElementById(cellID).className = "input--textfield-off";
-
-        }
-    }
-    EDITABLE = true;
-    document.getElementById(LAST_CELL).className = "input--textfield-on";
-
-    //document.getElementById(LAST_CELL).focus();
-    //document.getElementById(LAST_CELL).setSelectionRange(LAST_CELL_POS,LAST_CELL_POS);
-
-    var startCell = CELL_SELECTED;
-    var currentCell = _cell;
-
-    var columnStartCell = Number(startCell.substring(startCell.indexOf("c")+1, startCell.indexOf(":")));
-    var rowStartCell = Number(startCell.substring(startCell.indexOf("r")+1, startCell.length));
-
-    var columnCurrentCell = Number(currentCell.substring(currentCell.indexOf("c")+1, currentCell.indexOf(":")));
-    var rowCurrentCell = Number(currentCell.substring(currentCell.indexOf("r")+1, currentCell.length));
-
-    if(columnStartCell > columnCurrentCell)
-    {
-        var tmp = columnCurrentCell;
-        columnCurrentCell = columnStartCell;
-        columnStartCell = tmp;
-    }
-
-    if(rowStartCell > rowCurrentCell)
-    {
-        var tmp = rowCurrentCell;
-        rowCurrentCell = rowStartCell;
-        rowStartCell = tmp;
-    }
-
-    var selected = "c" + columnStartCell +"r" + rowStartCell + ":" + "c" + columnStartCell + "r" + rowCurrentCell;
-
-
-
-    var inputValue = document.getElementById(LAST_CELL).value;
-
-    var output = [inputValue.slice(0, LAST_CELL_POS), selected, inputValue.slice(LAST_CELL_POS)].join('');
-
-    document.getElementById(LAST_CELL).value = output;
-
-    //LAST_CELL_POS = LAST_CELL_POS+_functionName.length+1;
-
-
-
-    CELL_SELECTED ="";
-
-
-    document.getElementById(LAST_CELL).focus();
-
-    document.getElementById(LAST_CELL).setSelectionRange(LAST_CELL_POS,LAST_CELL_POS);
-
-}
-
-function downOnCell(_cell)
-{
-    if(!SELECTION_ACTIVE){return;}
-    event.preventDefault();
-    CELL_SELECTED=_cell;
-    SELECTION_CLICK_ACTIVE = true;
-
-}
-
-function clickedOnCell(_cell)
-{
-    if(SELECTION_ACTIVE)
-    {
-        event.preventDefault();
-        return;
-    }
-
-
-    if(EDITABLE == true && LAST_CELL == _cell )
-    {
-        document.getElementById(_cell).className = "input--textfield-on";
-        return;
-    }
-
-    LAST_CELL = _cell;
-
-    LAST_CELL_POS = 0;
-
-    if(element != _cell)
-    {
-        counter = 0;
-        time = 0;
-    }
-
-    if(counter == 1)
-    {
-        //alert("doubleclick")
-        var d = new Date();
-        if(element == _cell && d.getTime() - time < 1000)
-        {
-            EDITABLE = true;
-
-            document.getElementById(_cell).className = "input--textfield-on";
-
-        }
-        element="none";
-
-        time = 0;
-        counter = 0;
-
-    }else  if(counter == 0)
-    {
-        counter++;
-        element = _cell;
-
-        var d = new Date();
-        time = d.getTime();
-    }
-
-
-
-    //var column = Number(_cell.substring(_cell.indexOf("c")+1, _cell.indexOf(":")));
-    //var row = Number(_cell.substring(_cell.indexOf("r")+1, _cell.length));
-
-
-}
-
-function selectArea( _functionName )
-{
-
-    document.getElementById(LAST_CELL).focus();
-    SELECTION_ACTIVE=true;
-
-
-
-
-
-    //_functionName
-
-    var inputValue = document.getElementById(LAST_CELL).value;
-
-    var output = [inputValue.slice(0, LAST_CELL_POS), _functionName +"()", inputValue.slice(LAST_CELL_POS)].join('');
-
-    document.getElementById(LAST_CELL).value = output;
-
-    LAST_CELL_POS = LAST_CELL_POS+_functionName.length+1;
-
-
-    document.getElementById(LAST_CELL).focus();
-
-    document.getElementById(LAST_CELL).setSelectionRange(LAST_CELL_POS,LAST_CELL_POS);
-    document.getElementById(LAST_CELL).className = "input--textfield-on";
-    EDITABLE = true;
-
-
-}
-
-function mouseOverCell(_cell)
-{
-    if(!SELECTION_ACTIVE)
-    { return;}
-
-    if(!SELECTION_CLICK_ACTIVE)
-    {
-        document.getElementById(_cell).className = "input--textfield-selected";
-        return;
-    }
-
-
-    //Select everything
-    var startCell = CELL_SELECTED;
-    var currentCell = _cell;
-
-    var columnStartCell = Number(startCell.substring(startCell.indexOf("c")+1, startCell.indexOf(":")));
-    var rowStartCell = Number(startCell.substring(startCell.indexOf("r")+1, startCell.length));
-
-    var columnCurrentCell = Number(currentCell.substring(currentCell.indexOf("c")+1, currentCell.indexOf(":")));
-    var rowCurrentCell = Number(currentCell.substring(currentCell.indexOf("r")+1, currentCell.length));
-
-
-    if(columnStartCell > columnCurrentCell)
-    {
-        var tmp = columnCurrentCell;
-        columnCurrentCell = columnStartCell;
-        columnStartCell = tmp;
-    }
-
-    if(rowStartCell > rowCurrentCell)
-    {
-        var tmp = rowCurrentCell;
-        rowCurrentCell = rowStartCell;
-        rowStartCell = tmp;
-    }
-
-    for(var rows = 0; rows < 24; rows++)
-    {
-        for (var columns = 0; columns < 24; columns++)
-        {
-            var cellID = "c"+ columns +":r"+ rows;
-
-            if(rows >= rowStartCell && rows <= rowCurrentCell && columns >= columnStartCell && columns <= columnCurrentCell)
-            {
-                document.getElementById(cellID).className = "input--textfield-selected";
+function doGetCaretPosition (editableDiv) {
+
+    var caretPos = 0,
+        sel, range;
+    if (window.getSelection) {
+        sel = window.getSelection();
+        if (sel.rangeCount) {
+            range = sel.getRangeAt(0);
+            if (range.commonAncestorContainer.parentNode == editableDiv) {
+                caretPos = range.endOffset;
             }
-            else
-            {
-                document.getElementById(cellID).className = "input--textfield-off";
-            }
-
+        }
+    } else if (document.selection && document.selection.createRange) {
+        range = document.selection.createRange();
+        if (range.parentElement() == editableDiv) {
+            var tempEl = document.createElement("span");
+            editableDiv.insertBefore(tempEl, editableDiv.firstChild);
+            var tempRange = range.duplicate();
+            tempRange.moveToElementText(tempEl);
+            tempRange.setEndPoint("EndToEnd", range);
+            caretPos = tempRange.text.length;
         }
     }
-    //Set everything to off
-    //document.getElementById(_cell).className = "input--textfield-off";
-
+    return caretPos;
 }
-
-function mouseLeaveCell(_cell)
-{
-
-    if(!SELECTION_ACTIVE)
-    { return;}
-
-    if (!SELECTION_CLICK_ACTIVE) {
-
-        if(_cell == LAST_CELL)
-        {
-            document.getElementById(_cell).className = "input--textfield-on";
-        }
-        else
-        {
-            document.getElementById(_cell).className = "input--textfield-off";
-        }
-
-
-        return;
-    }
-
-
-}*/
